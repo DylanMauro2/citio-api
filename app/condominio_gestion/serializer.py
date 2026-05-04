@@ -1,12 +1,32 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Condominio, Espacio, ActivoTipo, Activo, MantencionEstado, Mantencion, MantencionProgramada
+from .models import Condominio, Espacio, ActivoTipo, Activo, MantencionProveedor, MantencionEstado, Mantencion, MantencionProgramada, MANTENCION_TIPO_CHOICES
 
 
 class ActivoTipoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivoTipo
         fields = "__all__"
+
+
+class MantencionProveedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MantencionProveedor
+        fields = "__all__"
+        read_only_fields = ['mantencion_proveedor_id', 'created_at', 'updated_at']
+
+
+class MantencionProveedorCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MantencionProveedor
+        fields = [
+            'mantencion_proveedor_nombre',
+            'mantencion_proveedor_rut',
+            'mantencion_proveedor_activo',
+            'mantencion_proveedor_telefono',
+            'mantencion_proveedor_email',
+            'mantencion_proveedor_administrador',
+        ]
 
 
 class MantencionEstadoSerializer(serializers.ModelSerializer):
@@ -17,6 +37,7 @@ class MantencionEstadoSerializer(serializers.ModelSerializer):
 
 class MantencionSerializer(serializers.ModelSerializer):
     mantencion_estado_detalle = MantencionEstadoSerializer(source='mantencion_estado', read_only=True)
+    mantencion_proveedor_detalle = MantencionProveedorSerializer(source='mantencion_proveedor', read_only=True)
     activo_nombre = serializers.CharField(source='activo.activo_nombre', read_only=True)
 
     class Meta:
@@ -25,16 +46,22 @@ class MantencionSerializer(serializers.ModelSerializer):
             'mantencion_id',
             'activo',
             'activo_nombre',
+            'mantencion_proveedor',
+            'mantencion_proveedor_detalle',
             'mantencion_estado',
             'mantencion_estado_detalle',
             'mantencion_tipo',
             'mantencion_descripcion',
             'mantencion_fecha_realizacion',
-            'mantencion_costo',
-            'mantencion_realizada_por',
+            'mantencion_hora',
+            'mantencion_tecnico_nombre',
+            'mantencion_tecnico_rut',
+            'mantencion_tecnico_telefono',
+            'mantencion_tecnico_email',
             'created_at',
+            'updated_at',
         ]
-        read_only_fields = ['mantencion_id', 'created_at']
+        read_only_fields = ['mantencion_id', 'created_at', 'updated_at']
 
 
 class MantencionCreateSerializer(serializers.ModelSerializer):
@@ -42,43 +69,110 @@ class MantencionCreateSerializer(serializers.ModelSerializer):
         model = Mantencion
         fields = [
             'activo',
+            'mantencion_proveedor',
             'mantencion_estado',
             'mantencion_tipo',
             'mantencion_descripcion',
             'mantencion_fecha_realizacion',
-            'mantencion_costo',
-            'mantencion_realizada_por',
+            'mantencion_hora',
+            'mantencion_tecnico_nombre',
+            'mantencion_tecnico_rut',
+            'mantencion_tecnico_telefono',
+            'mantencion_tecnico_email',
         ]
 
 
 class MantencionProgramadaSerializer(serializers.ModelSerializer):
-    mantencion_estado_detalle = MantencionEstadoSerializer(source='mantencion_estado', read_only=True)
-    activo_nombre = serializers.CharField(source='activo.activo_nombre', read_only=True)
+    mantencion_detalle = MantencionSerializer(source='mantencion', read_only=True)
 
     class Meta:
         model = MantencionProgramada
         fields = [
             'mantencion_programada_id',
-            'activo',
-            'activo_nombre',
-            'mantencion_estado',
-            'mantencion_estado_detalle',
-            'mantencion_programada_descripcion',
+            'mantencion',
+            'mantencion_detalle',
             'mantencion_programada_fecha',
+            'mantencion_programada_descripcion',
             'created_at',
+            'updated_at',
         ]
-        read_only_fields = ['mantencion_programada_id', 'created_at']
+        read_only_fields = ['mantencion_programada_id', 'created_at', 'updated_at']
 
 
-class MantencionProgramadaCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MantencionProgramada
-        fields = [
-            'activo',
-            'mantencion_estado',
-            'mantencion_programada_descripcion',
-            'mantencion_programada_fecha',
-        ]
+class MantencionProgramadaCreateSerializer(serializers.Serializer):
+    """
+    Crea una MantencionProgramada junto con su Mantencion en una sola operación.
+
+    Primero crea la Mantencion con los campos básicos (activo, proveedor, estado, tipo, descripcion).
+    Luego crea la MantencionProgramada con la fecha y descripción del calendario.
+
+    Campos requeridos:
+    - activo
+    - mantencion_programada_fecha
+
+    Campos opcionales de la Mantencion:
+    - mantencion_proveedor
+    - mantencion_estado (por defecto: PENDIENTE)
+    - mantencion_tipo
+    - mantencion_descripcion (describe el trabajo realizado)
+
+    Campos opcionales de la MantencionProgramada:
+    - mantencion_programada_descripcion (descripción visible en el calendario)
+    """
+    # Campos de Mantencion
+    activo = serializers.PrimaryKeyRelatedField(queryset=Activo.objects.all())
+    mantencion_proveedor = serializers.PrimaryKeyRelatedField(
+        queryset=MantencionProveedor.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    mantencion_estado = serializers.PrimaryKeyRelatedField(
+        queryset=MantencionEstado.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    mantencion_tipo = serializers.ChoiceField(
+        choices=MANTENCION_TIPO_CHOICES,
+        required=False,
+        allow_null=True
+    )
+    mantencion_descripcion = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True
+    )
+
+    # Campos de MantencionProgramada
+    mantencion_programada_fecha = serializers.DateField()
+    mantencion_programada_descripcion = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True
+    )
+
+    def to_representation(self, instance):
+        return MantencionProgramadaSerializer(instance).data
+
+    @transaction.atomic
+    def create(self, validated_data):
+        # Extraer campos propios de MantencionProgramada
+        mantencion_programada_fecha = validated_data.pop('mantencion_programada_fecha')
+        mantencion_programada_descripcion = validated_data.pop('mantencion_programada_descripcion', None)
+
+        # Usar estado enviado o por defecto PENDIENTE
+        if 'mantencion_estado' not in validated_data or validated_data.get('mantencion_estado') is None:
+            validated_data['mantencion_estado'] = MantencionEstado.objects.get(pk='PENDIENTE')
+
+        # Crear Mantencion solo con los campos básicos
+        mantencion = Mantencion.objects.create(**validated_data)
+
+        mantencion_programada = MantencionProgramada.objects.create(
+            mantencion=mantencion,
+            mantencion_programada_fecha=mantencion_programada_fecha,
+            mantencion_programada_descripcion=mantencion_programada_descripcion,
+        )
+
+        return mantencion_programada
 
 
 class ActivoSerializer(serializers.ModelSerializer):

@@ -143,6 +143,30 @@ class Activo(models.Model):
         return f"{self.activo_nombre} ({self.condominio.condominio_nombre})"
 
 
+class MantencionProveedor(models.Model):
+    """
+    Proveedor de servicios de mantención.
+    """
+    mantencion_proveedor_id = models.AutoField(primary_key=True)
+    mantencion_proveedor_nombre = models.TextField()
+    mantencion_proveedor_rut = models.TextField(blank=True, null=True)
+    mantencion_proveedor_activo = models.BooleanField(default=True)
+    mantencion_proveedor_telefono = models.TextField(blank=True, null=True)
+    mantencion_proveedor_email = models.TextField(blank=True, null=True)
+    mantencion_proveedor_administrador = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'mantencion_proveedor'
+        verbose_name = 'Proveedor de Mantención'
+        verbose_name_plural = 'Proveedores de Mantención'
+        ordering = ['mantencion_proveedor_nombre']
+
+    def __str__(self):
+        return self.mantencion_proveedor_nombre
+
+
 class MantencionEstado(models.Model):
     """
     Catálogo de estados de mantención.
@@ -151,6 +175,7 @@ class MantencionEstado(models.Model):
     mantencion_estado_nombre = models.CharField(max_length=100)
     mantencion_estado_descripcion = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'mantencion_estado'
@@ -164,7 +189,8 @@ class MantencionEstado(models.Model):
 
 class Mantencion(models.Model):
     """
-    Mantenciones realizadas a un activo.
+    Registro completo de una mantención. Puede originarse desde una
+    MantencionProgramada o crearse directamente.
     """
     mantencion_id = models.AutoField(primary_key=True)
     activo = models.ForeignKey(
@@ -172,6 +198,14 @@ class Mantencion(models.Model):
         on_delete=models.CASCADE,
         related_name='mantenciones',
         db_column='activo_id'
+    )
+    mantencion_proveedor = models.ForeignKey(
+        MantencionProveedor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='mantenciones',
+        db_column='mantencion_proveedor_id'
     )
     mantencion_estado = models.ForeignKey(
         MantencionEstado,
@@ -189,14 +223,13 @@ class Mantencion(models.Model):
     )
     mantencion_descripcion = models.TextField(blank=True, null=True)
     mantencion_fecha_realizacion = models.DateField(blank=True, null=True)
-    mantencion_costo = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        blank=True,
-        null=True
-    )
-    mantencion_realizada_por = models.CharField(max_length=100, blank=True, null=True)
+    mantencion_hora = models.TextField(blank=True, null=True)
+    mantencion_tecnico_nombre = models.TextField(blank=True, null=True)
+    mantencion_tecnico_rut = models.TextField(blank=True, null=True)
+    mantencion_tecnico_telefono = models.TextField(blank=True, null=True)
+    mantencion_tecnico_email = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'mantencion'
@@ -205,6 +238,7 @@ class Mantencion(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['activo'], name='idx_mantencion_activo'),
+            models.Index(fields=['mantencion_proveedor'], name='idx_mantencion_proveedor'),
         ]
 
     def __str__(self):
@@ -213,26 +247,20 @@ class Mantencion(models.Model):
 
 class MantencionProgramada(models.Model):
     """
-    Mantenciones programadas para un activo.
+    Entrada de calendario para una mantención programada.
+    Apunta a la Mantencion que contiene todos los detalles.
     """
     mantencion_programada_id = models.AutoField(primary_key=True)
-    activo = models.ForeignKey(
-        Activo,
+    mantencion = models.OneToOneField(
+        Mantencion,
         on_delete=models.CASCADE,
-        related_name='mantenciones_programadas',
-        db_column='activo_id'
+        related_name='programada',
+        db_column='mantencion_id'
     )
-    mantencion_estado = models.ForeignKey(
-        MantencionEstado,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='mantenciones_programadas',
-        db_column='mantencion_estado_code'
-    )
-    mantencion_programada_descripcion = models.TextField()
     mantencion_programada_fecha = models.DateField()
+    mantencion_programada_descripcion = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'mantencion_programada'
@@ -240,8 +268,8 @@ class MantencionProgramada(models.Model):
         verbose_name_plural = 'Mantenciones Programadas'
         ordering = ['mantencion_programada_fecha']
         indexes = [
-            models.Index(fields=['activo'], name='idx_mt_programada_activo'),
+            models.Index(fields=['mantencion'], name='idx_mt_programada_mantencion'),
         ]
 
     def __str__(self):
-        return f"{self.activo.activo_nombre} - {self.mantencion_programada_fecha}"
+        return f"{self.mantencion.activo.activo_nombre} - {self.mantencion_programada_fecha}"

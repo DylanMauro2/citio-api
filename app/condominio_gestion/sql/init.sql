@@ -2,6 +2,14 @@
 -- SCRIPT DE INICIALIZACIÓN - GESTIÓN DE CONDOMINIOS
 -- =============================================
 
+-- =============================================
+-- DROP TABLES (orden inverso a dependencias)
+-- =============================================
+DROP TABLE IF EXISTS activo CASCADE;
+DROP TABLE IF EXISTS activo_tipo CASCADE;
+DROP TABLE IF EXISTS espacio CASCADE;
+DROP TABLE IF EXISTS condominio CASCADE;
+
 -- Tabla: condominio
 CREATE TABLE IF NOT EXISTS condominio (
     condominio_id SERIAL PRIMARY KEY,
@@ -51,39 +59,11 @@ CREATE INDEX IF NOT EXISTS idx_activo_condominio ON activo(condominio_id);
 CREATE INDEX IF NOT EXISTS idx_activo_espacio ON activo(espacio_id);
 CREATE INDEX IF NOT EXISTS idx_activo_tipo ON activo(activo_tipo_code);
 
-
--- Tablas de mantención
-CREATE TABLE IF NOT EXISTS mantencion_estado (
-    mantencion_estado_code VARCHAR(50) PRIMARY KEY,
-    mantencion_estado_nombre VARCHAR(100) NOT NULL,
-    mantencion_estado_descripcion TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS mantencion (
-    mantencion_id SERIAL PRIMARY KEY,
-    activo_id INTEGER NOT NULL REFERENCES activo(activo_id) ON DELETE CASCADE,
-    mantencion_estado_code VARCHAR(50) REFERENCES mantencion_estado(mantencion_estado_code) ON DELETE SET NULL,
-    mantencion_tipo VARCHAR(50) CHECK (mantencion_tipo IN ('PREVENTIVA', 'CORRECTIVA', 'EMERGENCIA')),
-    mantencion_descripcion TEXT,
-    mantencion_fecha_realizacion DATE,
-    mantencion_costo DECIMAL(12, 2),
-    mantencion_realizada_por VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_mantencion_activo ON mantencion(activo_id);
-
-CREATE TABLE IF NOT EXISTS mantencion_programada (
-    mantencion_programada_id SERIAL PRIMARY KEY,
-    activo_id INTEGER NOT NULL REFERENCES activo(activo_id) ON DELETE CASCADE,
-    mantencion_estado_code VARCHAR(50) REFERENCES mantencion_estado(mantencion_estado_code) ON DELETE SET NULL,
-    mantencion_programada_descripcion TEXT NOT NULL,
-    mantencion_programada_fecha DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_mt_programada_activo ON mantencion_programada(activo_id);
+-- =============================================
+-- PERMISOS
+-- =============================================
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO citiouser;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO citiouser;
 
 -- =============================================
 -- DATOS INICIALES
@@ -97,8 +77,3 @@ INSERT INTO activo_tipo(activo_tipo_code, activo_tipo_nombre, activo_tipo_descri
   ('ILUMINACION', 'Iluminación', 'Sistemas de iluminación de áreas comunes', CURRENT_TIMESTAMP),
   ('ASCENSOR', 'Ascensores', 'Ascensores y elevadores', CURRENT_TIMESTAMP);
 
-INSERT INTO mantencion_estado(mantencion_estado_code, mantencion_estado_nombre, mantencion_estado_descripcion, created_at) VALUES
-  ('PENDIENTE', 'Pendiente', 'Mantención pendiente de realizarse', CURRENT_TIMESTAMP),
-  ('REALIZADA', 'Realizada', 'Mantención realizada con éxito', CURRENT_TIMESTAMP),
-  ('CANCELADA', 'Cancelada', 'Mantención cancelada por algún motivo', CURRENT_TIMESTAMP),
-  ('ATRASADA', 'Atrasada', 'Mantención atrasada', CURRENT_TIMESTAMP);

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Condominio, Espacio, ActivoTipo, Activo, MantencionEstado, Mantencion, MantencionProgramada
+from .models import Condominio, Espacio, ActivoTipo, Activo, MantencionProveedor, MantencionEstado, Mantencion, MantencionProgramada
 
 
 class EspacioInline(admin.TabularInline):
@@ -82,6 +82,25 @@ class ActivoAdmin(admin.ModelAdmin):
         return obj.espacio.condominio.condominio_nombre
 
 
+@admin.register(MantencionProveedor)
+class MantencionProveedorAdmin(admin.ModelAdmin):
+    list_display = [
+        'mantencion_proveedor_id',
+        'mantencion_proveedor_nombre',
+        'mantencion_proveedor_rut',
+        'mantencion_proveedor_activo',
+        'mantencion_proveedor_administrador',
+        'created_at',
+    ]
+    list_filter = ['mantencion_proveedor_activo']
+    search_fields = [
+        'mantencion_proveedor_nombre',
+        'mantencion_proveedor_rut',
+        'mantencion_proveedor_administrador',
+    ]
+    ordering = ['mantencion_proveedor_nombre']
+
+
 @admin.register(MantencionEstado)
 class MantencionEstadoAdmin(admin.ModelAdmin):
     list_display = ['mantencion_estado_code', 'mantencion_estado_nombre', 'created_at']
@@ -94,20 +113,22 @@ class MantencionAdmin(admin.ModelAdmin):
     list_display = [
         'mantencion_id',
         'activo',
+        'mantencion_proveedor',
         'mantencion_estado',
         'mantencion_tipo',
         'mantencion_fecha_realizacion',
-        'mantencion_costo',
-        'mantencion_realizada_por',
+        'mantencion_hora',
+        'mantencion_tecnico_nombre',
     ]
     list_filter = ['mantencion_tipo', 'mantencion_estado', 'mantencion_fecha_realizacion']
     search_fields = [
         'activo__activo_nombre',
-        'mantencion_realizada_por',
-        'mantencion_descripcion'
+        'mantencion_tecnico_nombre',
+        'mantencion_tecnico_rut',
+        'mantencion_descripcion',
     ]
     ordering = ['-created_at']
-    autocomplete_fields = ['activo']
+    autocomplete_fields = ['activo', 'mantencion_proveedor']
     date_hierarchy = 'mantencion_fecha_realizacion'
 
 
@@ -115,13 +136,14 @@ class MantencionAdmin(admin.ModelAdmin):
 class MantencionProgramadaAdmin(admin.ModelAdmin):
     list_display = [
         'mantencion_programada_id',
-        'activo',
-        'mantencion_estado',
+        'mantencion',
         'mantencion_programada_fecha',
         'created_at',
     ]
-    list_filter = ['mantencion_estado', 'mantencion_programada_fecha']
-    search_fields = ['activo__activo_nombre', 'mantencion_programada_descripcion']
+    list_filter = ['mantencion_programada_fecha']
+    search_fields = [
+        'mantencion__activo__activo_nombre',
+        'mantencion__mantencion_tecnico_nombre',
+    ]
     ordering = ['mantencion_programada_fecha']
-    autocomplete_fields = ['activo']
     date_hierarchy = 'mantencion_programada_fecha'

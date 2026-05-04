@@ -12,13 +12,15 @@ from .serializer import (
     CondominioSerializer,
     CondominioSimpleSerializer,
     CondominioConEspaciosCreateSerializer,
+    MantencionProveedorSerializer,
+    MantencionProveedorCreateSerializer,
     MantencionEstadoSerializer,
     MantencionSerializer,
     MantencionCreateSerializer,
     MantencionProgramadaSerializer,
     MantencionProgramadaCreateSerializer,
 )
-from .models import ActivoTipo, Activo, Espacio, Condominio, MantencionEstado, Mantencion, MantencionProgramada
+from .models import ActivoTipo, Activo, Espacio, Condominio, MantencionProveedor, MantencionEstado, Mantencion, MantencionProgramada
 
 
 class ActivoTipoView(viewsets.ModelViewSet):
@@ -157,6 +159,29 @@ class CondominioView(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class MantencionProveedorView(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar proveedores de mantención.
+    Filtros disponibles: activo (bool)
+    """
+    queryset = MantencionProveedor.objects.all()
+    serializer_class = MantencionProveedorSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return MantencionProveedorCreateSerializer
+        return MantencionProveedorSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        activo = self.request.query_params.get('activo')
+
+        if activo is not None:
+            queryset = queryset.filter(mantencion_proveedor_activo=activo.lower() == 'true')
+
+        return queryset
+
+
 class MantencionEstadoView(viewsets.ModelViewSet):
     """
     ViewSet para gestionar el catálogo de estados de mantención.
@@ -167,11 +192,11 @@ class MantencionEstadoView(viewsets.ModelViewSet):
 
 class MantencionView(viewsets.ModelViewSet):
     """
-    ViewSet para gestionar mantenciones realizadas.
-    Filtros disponibles: activo_id, condominio_id, mantencion_estado_code
+    ViewSet para gestionar mantenciones.
+    Filtros disponibles: activo_id, condominio_id, mantencion_estado_code, mantencion_proveedor_id
     """
     queryset = Mantencion.objects.select_related(
-        'activo', 'activo__condominio', 'mantencion_estado'
+        'activo', 'activo__condominio', 'mantencion_estado', 'mantencion_proveedor'
     ).all()
     serializer_class = MantencionSerializer
 
@@ -185,6 +210,7 @@ class MantencionView(viewsets.ModelViewSet):
         activo_id = self.request.query_params.get('activo_id')
         condominio_id = self.request.query_params.get('condominio_id')
         mantencion_estado_code = self.request.query_params.get('mantencion_estado_code')
+        mantencion_proveedor_id = self.request.query_params.get('mantencion_proveedor_id')
 
         if activo_id:
             queryset = queryset.filter(activo_id=activo_id)
@@ -192,17 +218,23 @@ class MantencionView(viewsets.ModelViewSet):
             queryset = queryset.filter(activo__condominio_id=condominio_id)
         if mantencion_estado_code:
             queryset = queryset.filter(mantencion_estado_code=mantencion_estado_code)
+        if mantencion_proveedor_id:
+            queryset = queryset.filter(mantencion_proveedor_id=mantencion_proveedor_id)
 
         return queryset
 
 
 class MantencionProgramadaView(viewsets.ModelViewSet):
     """
-    ViewSet para gestionar mantenciones programadas.
-    Filtros disponibles: activo_id, condominio_id, mantencion_estado_code
+    ViewSet para calendario de mantenciones programadas.
+    Filtros disponibles: activo_id, condominio_id, mantencion_estado_code, fecha_desde, fecha_hasta
     """
     queryset = MantencionProgramada.objects.select_related(
-        'activo', 'activo__condominio', 'mantencion_estado'
+        'mantencion',
+        'mantencion__activo',
+        'mantencion__activo__condominio',
+        'mantencion__mantencion_estado',
+        'mantencion__mantencion_proveedor',
     ).all()
     serializer_class = MantencionProgramadaSerializer
 
@@ -216,12 +248,18 @@ class MantencionProgramadaView(viewsets.ModelViewSet):
         activo_id = self.request.query_params.get('activo_id')
         condominio_id = self.request.query_params.get('condominio_id')
         mantencion_estado_code = self.request.query_params.get('mantencion_estado_code')
+        fecha_desde = self.request.query_params.get('fecha_desde')
+        fecha_hasta = self.request.query_params.get('fecha_hasta')
 
         if activo_id:
-            queryset = queryset.filter(activo_id=activo_id)
+            queryset = queryset.filter(mantencion__activo_id=activo_id)
         if condominio_id:
-            queryset = queryset.filter(activo__condominio_id=condominio_id)
+            queryset = queryset.filter(mantencion__activo__condominio_id=condominio_id)
         if mantencion_estado_code:
-            queryset = queryset.filter(mantencion_estado_code=mantencion_estado_code)
+            queryset = queryset.filter(mantencion__mantencion_estado_code=mantencion_estado_code)
+        if fecha_desde:
+            queryset = queryset.filter(mantencion_programada_fecha__gte=fecha_desde)
+        if fecha_hasta:
+            queryset = queryset.filter(mantencion_programada_fecha__lte=fecha_hasta)
 
         return queryset
