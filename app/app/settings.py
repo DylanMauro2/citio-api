@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'condominio_gestion',
+    'copropietarios',
+    'finanzas',
 ]
 
 MIDDLEWARE = [
