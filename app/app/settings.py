@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'condominio_gestion',
     'copropietarios',
     'finanzas',
+    'core',
 ]
 
 MIDDLEWARE = [

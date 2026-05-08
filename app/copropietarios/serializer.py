@@ -58,6 +58,10 @@ class UnidadSerializer(serializers.ModelSerializer):
             'unidad_block',
             'unidad_tipo',
             'unidad_rol_sii',
+            'unidad_alicuota',
+            'unidad_superficie_m2',
+            'unidad_num_estacionamientos',
+            'unidad_num_bodegas',
             'unidad_activa',
             'tenencias_activas',
             'created_at',
@@ -76,6 +80,10 @@ class UnidadCreateSerializer(serializers.ModelSerializer):
             'unidad_block',
             'unidad_tipo',
             'unidad_rol_sii',
+            'unidad_alicuota',
+            'unidad_superficie_m2',
+            'unidad_num_estacionamientos',
+            'unidad_num_bodegas',
             'unidad_activa',
         ]
 
@@ -128,6 +136,10 @@ class UnidadConTenenciaCreateSerializer(serializers.Serializer):
         ('LOCAL', 'Local Comercial'),
     ], default='DEPARTAMENTO')
     unidad_rol_sii = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
+    unidad_alicuota = serializers.DecimalField(max_digits=7, decimal_places=4, required=False, allow_null=True)
+    unidad_superficie_m2 = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    unidad_num_estacionamientos = serializers.IntegerField(default=0, required=False)
+    unidad_num_bodegas = serializers.IntegerField(default=0, required=False)
     unidad_activa = serializers.BooleanField(default=True)
     registro_tenencia = TenenciaInlineSerializer(required=False, allow_null=True)
 

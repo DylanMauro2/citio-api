@@ -89,7 +89,15 @@ class PeriodoCobroView(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        periodo = serializer.save()
+        presupuesto = serializer.validated_data.get('presupuesto')
+        if not presupuesto:
+            condominio = serializer.validated_data.get('condominio')
+            presupuesto = Presupuesto.objects.filter(
+                condominio=condominio,
+                presupuesto_activo=True,
+            ).order_by('-presupuesto_anio').first()
+
+        periodo = serializer.save(presupuesto=presupuesto)
         generar_cuotas_periodo(periodo)
 
 

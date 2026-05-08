@@ -50,6 +50,12 @@ class PeriodoCobroSerializer(serializers.ModelSerializer):
 
 
 class PeriodoCobroCreateSerializer(serializers.ModelSerializer):
+    presupuesto = serializers.PrimaryKeyRelatedField(
+        queryset=Presupuesto.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = PeriodoCobro
         fields = [

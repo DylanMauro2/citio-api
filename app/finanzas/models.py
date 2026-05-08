@@ -224,7 +224,7 @@ class MovimientoFondo(models.Model):
         verbose_name_plural = 'Movimientos de Fondo de Reserva'
         ordering = ['-movimiento_fecha']
         indexes = [
-            models.Index(fields=['condominio'], name='idx_movimiento_fondo_condominio'),
+            models.Index(fields=['condominio'], name='idx_mov_fondo_condominio'),
         ]
 
     def __str__(self):

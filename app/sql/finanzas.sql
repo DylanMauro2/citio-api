@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS movimiento_fondo (
     created_at                  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_movimiento_fondo_condominio ON movimiento_fondo(condominio_id);
+CREATE INDEX IF NOT EXISTS idx_mov_fondo_condominio ON movimiento_fondo(condominio_id);
 
 -- Tabla: registro_morosidad
 -- Snapshot histórico de morosidad generado al cerrar cada período.
